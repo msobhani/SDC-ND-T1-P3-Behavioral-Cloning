@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import shutil
 
+import cv2
 import numpy as np
 import socketio
 import eventlet
@@ -21,7 +22,7 @@ app = Flask(__name__)
 model = None
 prev_image_array = None
 
-
+    
 class SimplePIController:
     def __init__(self, Kp, Ki):
         self.Kp = Kp
@@ -47,7 +48,7 @@ controller = SimplePIController(0.1, 0.002)
 set_speed = 9
 controller.set_desired(set_speed)
 
-
+       
 @sio.on('telemetry')
 def telemetry(sid, data):
     if data:
@@ -61,8 +62,16 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
+
+        #Cropped and resized the image
+        image_array = image_array[60:130, :]
+        image_array = cv2.resize(image_array,(160, 70), interpolation = cv2.INTER_AREA)
+        
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
+        # Set the throttle to a fixed value
+        #throttle = 0.2
+                
         throttle = controller.update(float(speed))
 
         print(steering_angle, throttle)
